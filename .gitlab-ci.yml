@@ -1,0 +1,21 @@
+# GitLab CI/CD for YADS Infrastructure
+# Validates Docker Compose configurations
+
+stages:
+  - validate
+
+validate-compose:
+  stage: validate
+  image: docker:latest
+  services:
+    - docker:dind
+  script:
+    - docker-compose config -q || (echo "Config validation failed" && exit 1)
+    - for f in docker-compose.*.yml; do
+        if [ -e "$f" ]; then
+          docker-compose -f "$f" config -q || (echo "Validation failed for $f" && exit 1);
+        fi
+      done
+  only:
+    - merge_requests
+    - main

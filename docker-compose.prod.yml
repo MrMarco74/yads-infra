@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  # --- Backend Services ---
+  yads-api:
+    image: registry.example.com/apps/yads/yads:latest
+
+    command: sh -c "/app/scripts/backup_db.sh && python /app/scripts/maintenance/migrate_db.py && uvicorn yads.api.main:app --host 0.0.0.0 --port 8085"
+    restart: always
+    ports:
+      - "8085:8085"
+    environment:
+      - DATABASE_URL=postgresql://yads:${POSTGRES_PASSWORD:-yads_secret_password}@db:5432/yads
+      - REDIS_URL=redis://redis:6379/0
+      - LOG_DIR=/app/logs
+      - API_KEY=${API_KEY}
+    volumes:
+      - yads_config:/app/data
+      - logs:/app/logs
+      - screenshots:/app/yads/api/static/screenshots
+    networks:
+      yads-net:
+      proxy-net:
+        aliases:
+          - yads
+
+  yads-worker:
+    image: registry.example.com/apps/yads/yads:latest
+
+    command: python /app/scripts/start_worker.py
+    restart: always
+    environment:
+      - DATABASE_URL=postgresql://yads:${POSTGRES_PASSWORD:-yads_secret_password}@db:5432/yads
+      - REDIS_URL=redis://redis:6379/0
+      - LOG_DIR=/app/logs
+      # Worker needs to know config too if it shares DB details? 
+      # Yes, if DB password changes, worker needs to know.
+      # So worker must also mount the config.
+      - CONFIG_PATH=/app/data/config.env
+    volumes:
+      - yads_config:/app/data
+      - logs:/app/logs
+      - screenshots:/app/yads/api/static/screenshots
+    depends_on:
+      - db
+      - redis
+    networks:
+      - yads-net
+
+  # --- Infrastructure ---
+  db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=yads
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-yads_secret_password}
+      - POSTGRES_DB=yads
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - yads-net
+
+  redis:
+    image: valkey/valkey:8-alpine
+    command: redis-server --appendonly yes
+    restart: always
+    volumes:
+      - redis_data:/data
+    networks:
+      - yads-net
+
+volumes:
+  postgres_data:
+  redis_data:
+  yads_config:
+  logs:
+  screenshots:
+
+networks:
+  yads-net:
+    driver: bridge
+  proxy-net:
+    external: true
+    name: proxy-net

@@ -3,6 +3,19 @@
 
 stages:
   - validate
+  - security
+
+secret_scan:
+  stage: security
+  image: 
+    name: aquasec/trivy:latest
+    entrypoint: [""]
+  script:
+    - trivy fs --scanners secret --exit-code 1 .
+  allow_failure: false
+  only:
+    - merge_requests
+    - main
 
 validate-compose:
   stage: validate

@@ -5,7 +5,7 @@ services:
   yads-api:
     container_name: yads-app-yads-api-1
     build:
-      context: .
+      context: ../yads
       target: dev
     command: uvicorn yads.api.main:app --host 0.0.0.0 --port 8085 --reload
     ports:
@@ -55,7 +55,7 @@ services:
   yads-worker:
     hostname: ${WORKER_NAME:-yads-worker-1}
     build:
-      context: .
+      context: ../yads
       target: dev
     command: python /app/scripts/start_worker.py
     environment:
@@ -80,7 +80,7 @@ services:
   yads-worker-2:
     hostname: ${WORKER_NAME_2:-yads-worker-2}
     build:
-      context: .
+      context: ../yads
       target: dev
     command: python /app/scripts/start_worker.py
     environment:

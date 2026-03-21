@@ -45,6 +45,7 @@ services:
       - ./logs:/app/logs
       - .:/app
       - nuclei_templates:/root/nuclei-templates
+      - yads_custom_modules:/app/yads/modules/custom
     depends_on:
       - db
       - redis
@@ -70,6 +71,7 @@ services:
       - ./logs:/app/logs
       - .:/app
       - nuclei_templates:/root/nuclei-templates
+      - yads_custom_modules:/app/yads/modules/custom
     depends_on:
       - db
       - redis
@@ -95,6 +97,7 @@ services:
       - ./logs:/app/logs
       - .:/app
       - nuclei_templates:/root/nuclei-templates
+      - yads_custom_modules:/app/yads/modules/custom
     depends_on:
       - db
       - redis
@@ -252,6 +255,7 @@ volumes:
   postgres_data:
   nuclei_templates:
   redis_data:
+  yads_custom_modules:
   keycloak-db-data:
   prometheus-data:
   grafana-data:

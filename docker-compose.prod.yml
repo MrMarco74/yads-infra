@@ -12,6 +12,7 @@ services:
     environment:
       - DATABASE_URL=postgresql://yads:${POSTGRES_PASSWORD:-yads_secret_password}@db:5432/yads
       - REDIS_URL=redis://redis:6379/0
+      - BROKER_URL=amqp://yads:yads@rabbitmq:5672//
       - LOG_DIR=/app/logs
       - API_KEY=${API_KEY}
     volumes:
@@ -32,8 +33,9 @@ services:
     environment:
       - DATABASE_URL=postgresql://yads:${POSTGRES_PASSWORD:-yads_secret_password}@db:5432/yads
       - REDIS_URL=redis://redis:6379/0
+      - BROKER_URL=amqp://yads:yads@rabbitmq:5672//
       - LOG_DIR=/app/logs
-      # Worker needs to know config too if it shares DB details? 
+      # Worker needs to know config too if it shares DB details?
       # Yes, if DB password changes, worker needs to know.
       # So worker must also mount the config.
       - CONFIG_PATH=/app/data/config.env
@@ -44,6 +46,18 @@ services:
     depends_on:
       - db
       - redis
+    networks:
+      - yads-net
+
+  # --- Message Broker ---
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    restart: always
+    environment:
+      - RABBITMQ_DEFAULT_USER=yads
+      - RABBITMQ_DEFAULT_PASS=yads
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
     networks:
       - yads-net
 
@@ -72,6 +86,7 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  rabbitmq_data:
   yads_config:
   logs:
   screenshots:

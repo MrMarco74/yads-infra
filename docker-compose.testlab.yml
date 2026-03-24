@@ -77,6 +77,7 @@ services:
     environment:
       DATABASE_URL: postgresql://yads:yadsLocal2026@172.30.0.200:5432/yads
       REDIS_URL: redis://172.30.0.210:6379/0
+      BROKER_URL: redis://172.30.0.210:6379/1
       SECRET_KEY: test-secret-key-for-yads-testing-32chars!
       AUTH_MODE: local
       DEBUG: "true"
@@ -113,6 +114,7 @@ services:
     environment:
       DATABASE_URL: postgresql://yads:yadsLocal2026@172.30.0.200:5432/yads
       REDIS_URL: redis://172.30.0.210:6379/0
+      BROKER_URL: redis://172.30.0.210:6379/1
       SECRET_KEY: test-secret-key-for-yads-testing-32chars!
       LOG_DIR: /app/logs
       DEBUG: "true"

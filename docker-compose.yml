@@ -16,6 +16,7 @@ services:
       - DATABASE_URL=postgresql://yads:***@db:5432/yads
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-yads_dev_local}
       - REDIS_URL=redis://redis:6379/0
+      - BROKER_URL=amqp://yads:yads@rabbitmq:5672//
       - LOG_DIR=/app/logs
       - MFA_ENABLED=${MFA_ENABLED:-true}
       - SETUP_TOKEN=${SETUP_TOKEN:-}
@@ -49,6 +50,7 @@ services:
     depends_on:
       - db
       - redis
+      - rabbitmq
     networks:
       - yads-net
       - proxy-net
@@ -63,6 +65,7 @@ services:
       - DATABASE_URL=${DATABASE_URL:-postgresql://yads:***@db:5432/yads}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-yads_dev_local}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - BROKER_URL=${BROKER_URL:-amqp://yads:yads@rabbitmq:5672//}
       - LOG_DIR=/app/logs
       - WORKER_CONCURRENCY=${WORKER_CONCURRENCY:-}
       - WORKER_QUEUES=${WORKER_QUEUES:-celery,discovery}
@@ -75,6 +78,7 @@ services:
     depends_on:
       - db
       - redis
+      - rabbitmq
     networks:
       - yads-net
 
@@ -89,6 +93,7 @@ services:
       - DATABASE_URL=${DATABASE_URL:-postgresql://yads:***@db:5432/yads}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-yads_dev_local}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - BROKER_URL=${BROKER_URL:-amqp://yads:yads@rabbitmq:5672//}
       - LOG_DIR=/app/logs
       - WORKER_CONCURRENCY=${WORKER_CONCURRENCY:-}
       - WORKER_QUEUES=${WORKER_QUEUES:-celery,discovery}
@@ -101,6 +106,21 @@ services:
     depends_on:
       - db
       - redis
+      - rabbitmq
+    networks:
+      - yads-net
+
+  # --- Message Broker ---
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    hostname: yads-rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=yads
+      - RABBITMQ_DEFAULT_PASS=yads
+    ports:
+      - "${RABBITMQ_MGMT_PORT:-15672}:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
     networks:
       - yads-net
 
@@ -255,6 +275,7 @@ volumes:
   postgres_data:
   nuclei_templates:
   redis_data:
+  rabbitmq_data:
   yads_custom_modules:
   keycloak-db-data:
   prometheus-data:

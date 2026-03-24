@@ -50,6 +50,7 @@ services:
     environment:
       - DATABASE_URL=${DATABASE_URL:-postgresql://yads:changeme_in_env@db:5432/yads}
       - REDIS_URL=redis://redis:6379/0
+      - BROKER_URL=amqp://yads:${RABBITMQ_PASSWORD:-yads}@rabbitmq:5672//
       - LOG_DIR=/app/logs
       - MFA_ENABLED=${MFA_ENABLED:-true}
       - WORKER_MODE=primary
@@ -102,6 +103,7 @@ services:
     environment:
       - DATABASE_URL=${DATABASE_URL:-postgresql://yads:changeme_in_env@db:5432/yads}
       - REDIS_URL=redis://redis:6379/0
+      - BROKER_URL=amqp://yads:${RABBITMQ_PASSWORD:-yads}@rabbitmq:5672//
       - LOG_DIR=/app/logs
       - WORKER_MODE=primary
       - WORKER_NAME=yads-worker-primary
@@ -140,6 +142,7 @@ services:
     environment:
       - DATABASE_URL=${DATABASE_URL:-postgresql://yads:changeme_in_env@db:5432/yads}
       - REDIS_URL=redis://redis:6379/0
+      - BROKER_URL=amqp://yads:${RABBITMQ_PASSWORD:-yads}@rabbitmq:5672//
       - MANAGER_URL=http://yads-api:8000
       - WORKER_REGISTRATION_TOKEN=${WORKER_REGISTRATION_TOKEN}
       - WORKER_MODE=secondary
@@ -177,6 +180,34 @@ services:
           memory: 4G
         reservations:
           memory: 1G
+
+  # ==========================================================================
+  # Message Broker (Manager Node Only)
+  # ==========================================================================
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    hostname: yads-rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=yads
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD:-yads}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - yads-internal
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == prod-node
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 128M
 
   # ==========================================================================
   # Infrastructure (Manager Node Only)
@@ -276,6 +307,7 @@ services:
     environment:
       - DATABASE_URL=${DATABASE_URL:-postgresql://yads:changeme_in_env@db:5432/yads}
       - REDIS_URL=redis://redis:6379/0
+      - BROKER_URL=amqp://yads:${RABBITMQ_PASSWORD:-yads}@rabbitmq:5672//
     networks:
       - yads-internal
     deploy:
@@ -297,6 +329,8 @@ volumes:
   postgres_data:
     driver: local
   redis_data:
+    driver: local
+  rabbitmq_data:
     driver: local
   logs:
     driver: local

@@ -1,0 +1,142 @@
+# Production server deployment — Docker Compose (no Swarm)
+# Use: docker compose -f docker-compose.server.yml up -d
+# Secrets: set in .env file (never commit)
+
+services:
+
+  # ── YADS Application ────────────────────────────────────────────────────────
+
+  yads-api:
+    image: registry.yads-security.com/yads/yads-api:latest
+    restart: unless-stopped
+    command: uvicorn yads.api.main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=redis://redis:6379/0
+      - BROKER_URL=amqp://yads:${RABBITMQ_PASSWORD}@rabbitmq:5672//
+      - LOG_DIR=/app/logs
+      - MFA_ENABLED=${MFA_ENABLED:-true}
+      - SECRET_KEY=${SECRET_KEY}
+      - SIGNING_KEY=${SIGNING_KEY}
+      - REFRESH_SECRET=${REFRESH_SECRET}
+      - YADS_ENCRYPTION_KEY=${YADS_ENCRYPTION_KEY}
+      - AUTH_MODE=${AUTH_MODE:-local}
+      - SETUP_TOKEN=${SETUP_TOKEN:-}
+      - METRICS_ENABLED=${METRICS_ENABLED:-false}
+      - METRICS_AUTH_MODE=${METRICS_AUTH_MODE:-token}
+      - METRICS_TOKEN=${METRICS_TOKEN:-}
+      - SHADOWTWIN_URL=${SHADOWTWIN_URL:-}
+      - SUPPORT_PORTAL_VERIFY_SSL=${SUPPORT_PORTAL_VERIFY_SSL:-true}
+    volumes:
+      - logs:/app/logs
+      - data:/app/data
+      - nuclei_templates:/root/nuclei-templates
+    depends_on:
+      - db
+      - redis
+      - rabbitmq
+    networks:
+      - yads-net
+      - proxy-net
+
+  yads-worker:
+    image: registry.yads-security.com/yads/yads-worker:latest
+    restart: unless-stopped
+    hostname: yads-worker-primary
+    command: python /app/scripts/start_worker.py
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=redis://redis:6379/0
+      - BROKER_URL=amqp://yads:${RABBITMQ_PASSWORD}@rabbitmq:5672//
+      - LOG_DIR=/app/logs
+      - WORKER_NAME=yads-worker-primary
+    volumes:
+      - logs:/app/logs
+      - data:/app/data
+      - nuclei_templates:/root/nuclei-templates
+    depends_on:
+      - db
+      - redis
+      - rabbitmq
+    networks:
+      - yads-net
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+
+  yads-shadowtwin:
+    image: registry.yads-security.com/yads/yads-shadowtwin:latest
+    restart: unless-stopped
+    networks:
+      - yads-net
+      - proxy-net
+
+
+  # ── Infrastructure ───────────────────────────────────────────────────────────
+
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    command: postgres -N 300
+    environment:
+      - POSTGRES_USER=yads
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=yads
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - yads-net
+
+  redis:
+    image: valkey/valkey:8-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy volatile-lru
+    volumes:
+      - redis_data:/data
+    networks:
+      - yads-net
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    restart: unless-stopped
+    hostname: yads-rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=yads
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+      - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/conf.d/99-yads.conf:ro
+    networks:
+      - yads-net
+
+  # ── Registry ─────────────────────────────────────────────────────────────────
+
+  yads-registry:
+    image: registry:2
+    restart: unless-stopped
+    environment:
+      - REGISTRY_S3_ACCESS_KEY=${REGISTRY_S3_ACCESS_KEY}
+      - REGISTRY_S3_SECRET_KEY=${REGISTRY_S3_SECRET_KEY}
+      - REGISTRY_S3_BUCKET=${REGISTRY_S3_BUCKET:-yads-registry}
+      - REGISTRY_HTTP_SECRET=${REGISTRY_HTTP_SECRET}
+    volumes:
+      - ./registry-config.yml:/etc/docker/registry/config.yml:ro
+    networks:
+      - proxy-net
+
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:
+  logs:
+  data:
+  nuclei_templates:
+
+networks:
+  yads-net:
+    driver: bridge
+  proxy-net:
+    external: true
+    name: proxy-net

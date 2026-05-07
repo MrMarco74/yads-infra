@@ -1,0 +1,28 @@
+version: 0.1
+log:
+  level: warn
+storage:
+  s3:
+    accesskey: ${REGISTRY_S3_ACCESS_KEY}
+    secretkey: ${REGISTRY_S3_SECRET_KEY}
+    region: fsn1
+    regionendpoint: https://fsn1.your-objectstorage.com
+    bucket: ${REGISTRY_S3_BUCKET:-yads-registry}
+    secure: true
+    chunksize: 5242880
+    multipartcopychunksize: 33554432
+    multipartcopythresholdsize: 33554432
+  delete:
+    enabled: true
+  cache:
+    blobdescriptor: inmemory
+http:
+  addr: :5000
+  secret: ${REGISTRY_HTTP_SECRET}
+  headers:
+    X-Content-Type-Options: [nosniff]
+health:
+  storagedriver:
+    enabled: true
+    interval: 10s
+    threshold: 3

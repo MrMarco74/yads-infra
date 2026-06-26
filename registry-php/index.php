@@ -3,7 +3,8 @@
  * YADS OCI Distribution Spec v2 — read-only registry
  *
  * Serves OCI image layouts stored under data/{namespace}/{image}/.
- * Write endpoints return 403. Authentication is handled by Apache via .htaccess.
+ * Write endpoints return 403. Auth is handled in PHP (avoids Apache AuthUserFile path issues).
+ * Credentials are loaded from auth.php (not committed, gitignored).
  *
  * Image format on disk (OCI image layout, as produced by skopeo):
  *   data/yads/yads-api/
@@ -13,6 +14,26 @@
  */
 
 define('DATA_DIR', __DIR__ . '/data');
+
+// ── Auth ─────────────────────────────────────────────────────────────────────
+// Load credentials from auth.php (not in git). Format:
+//   <?php return ['user' => 'yads-readonly', 'pass' => 'secret'];
+$auth_file = __DIR__ . '/auth.php';
+if (!file_exists($auth_file)) {
+    http_response_code(503);
+    exit('Registry auth not configured.');
+}
+$creds = require $auth_file;
+
+$given_user = $_SERVER['PHP_AUTH_USER'] ?? '';
+$given_pass = $_SERVER['PHP_AUTH_PW']   ?? '';
+
+// pass_hash is a bcrypt hash generated with: password_hash('secret', PASSWORD_BCRYPT)
+if ($given_user !== $creds['user'] || !password_verify($given_pass, $creds['pass_hash'])) {
+    header('WWW-Authenticate: Basic realm="YADS Registry"');
+    http_response_code(401);
+    exit;
+}
 
 header('Docker-Distribution-API-Version: registry/2.0');
 header('X-Content-Type-Options: nosniff');

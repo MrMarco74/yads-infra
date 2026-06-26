@@ -1,23 +1,8 @@
 Options -Indexes -MultiViews
 
-# Route all OCI Distribution API requests through index.php
 RewriteEngine On
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteRule ^(.*)$ index.php [QSA,L]
 
-# Block direct access to blob/manifest data files
-RewriteRule ^data/ - [F,L]
-
-# HTTP Basic Auth — credentials live in .htpasswd (outside web root if possible)
-AuthType Basic
-AuthName "YADS Registry"
-AuthUserFile /home/www/.yads-registry-htpasswd
-Require valid-user
-
-# Disable PHP execution inside data/ (defence-in-depth)
-<Directory data>
-    php_flag engine off
-</Directory>
-
-# Large blob uploads are write-only via rsync — no upload size limit needed here
-# (push endpoints return 403 regardless)
+# Block direct access to data/ and auth.php
+RewriteRule ^(data|auth\.php)(/|$) - [F,L]

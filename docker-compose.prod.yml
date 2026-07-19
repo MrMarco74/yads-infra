@@ -3,8 +3,9 @@ version: '3.8'
 services:
   # --- Backend Services ---
   yads-api:
-    image: registry.example.com/apps/yads/yads:latest
-
+    build:
+      context: ../yads
+      target: api
     command: sh -c "/app/scripts/backup_db.sh && python /app/scripts/maintenance/migrate_db.py && uvicorn yads.api.main:app --host 0.0.0.0 --port 8085"
     restart: always
     ports:
@@ -26,8 +27,9 @@ services:
           - yads
 
   yads-worker:
-    image: registry.example.com/apps/yads/yads:latest
-
+    build:
+      context: ../yads
+      target: worker
     command: python /app/scripts/start_worker.py
     restart: always
     environment:

@@ -20,6 +20,8 @@ services:
       - LOG_DIR=/app/logs
       - MFA_ENABLED=${MFA_ENABLED:-true}
       - SETUP_TOKEN=${SETUP_TOKEN:-}
+      - YADS_ADMIN_USER=${YADS_ADMIN_USER:-}
+      - YADS_ADMIN_PASS=${YADS_ADMIN_PASS:-}
       # Authentication Mode: "local" (default) or "oidc" (Keycloak)
       - AUTH_MODE=${AUTH_MODE:-oidc}
       # OIDC/Keycloak — only relevant if AUTH_MODE=oidc

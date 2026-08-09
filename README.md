@@ -5,6 +5,7 @@ Deployment infrastructure for [YADS](https://github.com/MrMarco74/yads) — Dock
 ## Contents
 
 - **`docker-compose.yml`** / **`docker-compose.prod.yml`** / **`docker-compose.server.yml`** — core stack (API, worker, Postgres, Redis), building from source against a sibling `../yads` (and `../yads-shadowtwin`) checkout
+- **`docker-compose.prebuilt.yml`** — same core stack, but pulls prebuilt images from GHCR instead of building from source — no sibling `../yads` checkout or local build toolchain needed
 - **`docker-compose.build.yml`** — thin overlay adding `build:` sections on top of the base stack
 - **`docker-compose.test.yml`** / **`docker-compose.testlab.yml`** — test environment and an intentionally-vulnerable target stack used to exercise YADS's own scanners
 - **`keycloak/`** — example Keycloak realm exports for OIDC auth (`realm-frischkorn.json`, `realm-yads-platform.json`) — demo users/passwords only, not for production use as-is
@@ -31,6 +32,15 @@ docker compose -f docker-compose.server.yml up -d
 
 `docker-compose.yml` (the default quickstart file) doesn't need this — it creates its own
 `proxy-net` network automatically.
+
+To skip building from source entirely and just pull prebuilt images (published for every
+[release tag](https://github.com/MrMarco74/yads/releases)):
+
+```bash
+cp .env.example .env
+YADS_VERSION=v1.20.0 docker compose -f docker-compose.prebuilt.yml pull
+YADS_VERSION=v1.20.0 docker compose -f docker-compose.prebuilt.yml up -d
+```
 
 ## License
 

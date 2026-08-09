@@ -1,0 +1,122 @@
+# Same stack as docker-compose.yml, but pulls prebuilt images from GHCR
+# instead of building from a sibling ../yads checkout -- no local build
+# toolchain (npm, Playwright, Nuclei download) needed, and you don't need
+# to clone the yads repo itself, just this one.
+#
+# Images are published by yads/.github/workflows/publish-images.yml on
+# every vX.Y.Z release tag; see https://github.com/MrMarco74/yads/releases.
+#
+# Usage:
+#   YADS_VERSION=v1.20.0 docker compose -f docker-compose.prebuilt.yml pull
+#   YADS_VERSION=v1.20.0 docker compose -f docker-compose.prebuilt.yml up -d
+#
+# If you're building from source instead, use docker-compose.yml (dev,
+# hot-reload) or docker-compose.server.yml (production, single VM) instead
+# of this file.
+services:
+  yads-api:
+    image: ghcr.io/mrmarco74/yads-api:${YADS_VERSION:-latest}
+    ports:
+      - "8085:8085"
+    environment:
+      - DATABASE_URL=postgresql://yads:***@db:5432/yads
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-yads_dev_local}
+      - REDIS_URL=redis://redis:6379/0
+      - BROKER_URL=amqp://yads:yads@rabbitmq:5672//
+      - LOG_DIR=/app/logs
+      - MFA_ENABLED=${MFA_ENABLED:-true}
+      - SETUP_TOKEN=${SETUP_TOKEN:-}
+      - YADS_ADMIN_USER=${YADS_ADMIN_USER:-}
+      - YADS_ADMIN_PASS=${YADS_ADMIN_PASS:-}
+      - AUTH_MODE=${AUTH_MODE:-local}
+      - METRICS_ENABLED=${METRICS_ENABLED:-false}
+      - METRICS_AUTH_MODE=${METRICS_AUTH_MODE:-token}
+      - METRICS_TOKEN=${METRICS_TOKEN:-}
+    volumes:
+      - yads_logs:/app/logs
+      - yads_screenshots:/app/yads/api/static/screenshots
+      - nuclei_templates:/root/nuclei-templates
+      - yads_custom_modules:/app/yads/modules/custom
+    depends_on:
+      - db
+      - redis
+      - rabbitmq
+    networks:
+      - yads-net
+      - proxy-net
+
+  yads-worker:
+    image: ghcr.io/mrmarco74/yads-worker:${YADS_VERSION:-latest}
+    hostname: ${WORKER_NAME:-yads-worker-1}
+    environment:
+      - DATABASE_URL=${DATABASE_URL:-postgresql://yads:***@db:5432/yads}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-yads_dev_local}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - BROKER_URL=${BROKER_URL:-amqp://yads:yads@rabbitmq:5672//}
+      - LOG_DIR=/app/logs
+      - WORKER_CONCURRENCY=${WORKER_CONCURRENCY:-}
+      - WORKER_QUEUES=${WORKER_QUEUES:-celery,discovery}
+      - WORKER_NAME=${WORKER_NAME:-yads-worker-1}
+    volumes:
+      - yads_logs:/app/logs
+      - yads_screenshots:/app/yads/api/static/screenshots
+      - nuclei_templates:/root/nuclei-templates
+      - yads_custom_modules:/app/yads/modules/custom
+    depends_on:
+      - db
+      - redis
+      - rabbitmq
+    networks:
+      - yads-net
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    hostname: yads-rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=yads
+      - RABBITMQ_DEFAULT_PASS=yads
+    ports:
+      - "${RABBITMQ_MGMT_PORT:-15672}:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - yads-net
+
+  db:
+    image: postgres:15-alpine
+    command: postgres -N 300
+    environment:
+      - POSTGRES_USER=yads
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-yads_dev_local}
+      - POSTGRES_DB=yads
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - yads-net
+
+  redis:
+    image: valkey/valkey:8-alpine
+    command: redis-server --appendonly yes
+    ports:
+      - "${REDIS_HOST_IP:-127.0.0.1}:6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - yads-net
+
+volumes:
+  postgres_data:
+  nuclei_templates:
+  redis_data:
+  rabbitmq_data:
+  yads_custom_modules:
+  yads_logs:
+  yads_screenshots:
+
+networks:
+  yads-net:
+    driver: bridge
+  proxy-net:
+    driver: bridge

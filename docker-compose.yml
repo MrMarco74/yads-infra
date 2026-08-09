@@ -22,8 +22,9 @@ services:
       - SETUP_TOKEN=${SETUP_TOKEN:-}
       - YADS_ADMIN_USER=${YADS_ADMIN_USER:-}
       - YADS_ADMIN_PASS=${YADS_ADMIN_PASS:-}
-      # Authentication Mode: "local" (default) or "oidc" (Keycloak)
-      - AUTH_MODE=${AUTH_MODE:-oidc}
+      # Authentication Mode: "local" (default) or "oidc" (Keycloak, needs
+      # --profile keycloak or an external instance configured via .env)
+      - AUTH_MODE=${AUTH_MODE:-local}
       # OIDC/Keycloak — only relevant if AUTH_MODE=oidc
       # OIDC_SERVER_URL: Docker-internal URL (container-to-container token exchange)
       # OIDC_PUBLIC_URL: Browser-facing URL (user redirect to Keycloak login)
@@ -144,11 +145,11 @@ services:
   redis:
     image: valkey/valkey:8-alpine
     command: redis-server --appendonly yes
-    # Expose Redis only on the LAN interface (not all interfaces).
-    # REDIS_HOST_IP defaults to edward's LAN IP so remote workers (dana) can connect.
-    # Set REDIS_HOST_IP=127.0.0.1 in .env to restrict to localhost only.
+    # Defaults to localhost-only. If you run distributed workers on other
+    # LAN hosts, set REDIS_HOST_IP in .env to this host's LAN IP so they
+    # can connect.
     ports:
-      - "${REDIS_HOST_IP:-192.168.10.92}:6379:6379"
+      - "${REDIS_HOST_IP:-127.0.0.1}:6379:6379"
     volumes:
       - redis_data:/data
     networks:
@@ -289,5 +290,9 @@ volumes:
 networks:
   yads-net:
     driver: bridge
+  # Not external here (unlike docker-compose.server.yml): this quickstart
+  # stack has no separate reverse-proxy to share a network with, so Compose
+  # creates it. Fine to put a reverse proxy in front later via yads-api's
+  # published port.
   proxy-net:
-    external: true
+    driver: bridge

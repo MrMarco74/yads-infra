@@ -20,6 +20,18 @@ cp .env.example .env
 docker compose up -d
 ```
 
+`docker-compose.server.yml` (single-VM production deployment, no reverse-proxy included)
+expects a pre-existing external `proxy-net` Docker network, so a separate reverse-proxy
+stack can share it:
+
+```bash
+docker network create proxy-net
+docker compose -f docker-compose.server.yml up -d
+```
+
+`docker-compose.yml` (the default quickstart file) doesn't need this — it creates its own
+`proxy-net` network automatically.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).

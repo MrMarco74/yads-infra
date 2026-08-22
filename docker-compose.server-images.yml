@@ -56,6 +56,7 @@ services:
       - BROKER_URL=amqp://yads:${RABBITMQ_PASSWORD}@rabbitmq:5672//
       - LOG_DIR=/app/logs
       - WORKER_NAME=yads-worker-primary
+      - YADS_ENCRYPTION_KEY=${YADS_ENCRYPTION_KEY}
     volumes:
       - logs:/app/logs
       - data:/app/data

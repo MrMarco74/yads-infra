@@ -10,6 +10,9 @@ services:
     build:
       context: ../yads
       target: api
+      args:
+        - YADS_GIT_SHA=${YADS_GIT_SHA:-unknown}
+        - YADS_BUILD_TIME=${YADS_BUILD_TIME:-unknown}
     restart: unless-stopped
     command: uvicorn yads.api.main:app --host 0.0.0.0 --port 8000
     ports:

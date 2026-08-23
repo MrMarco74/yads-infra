@@ -1,5 +1,7 @@
 # yads-infra
 
+![License](https://img.shields.io/badge/license-MIT-blue.svg) ![Language](https://img.shields.io/badge/language-Shell-informational.svg) ![AI generated](https://img.shields.io/badge/AI-generated-8A2BE2.svg)
+
 Deployment infrastructure for [YADS](https://github.com/MrMarco74/yads) — Docker Compose stacks, Keycloak realm examples, and a monitoring stack (Prometheus/Grafana/Loki).
 
 ## Contents
